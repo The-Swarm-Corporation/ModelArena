@@ -2,3 +2,5 @@ torch
 loguru
 transformers
 datasets
+numpy
+matplotlib
