@@ -905,18 +905,147 @@ class ModelArena:
         return winner
 
 
-def run_adaptive_training_experiment(
-    output_dir: str = "./adaptive_training_results",
-    total_steps: int = 5000,
+# def run_adaptive_training_experiment(
+#     output_dir: str = "./adaptive_training_results",
+#     total_steps: int = 5000,
+#     dataset_name: str = "wikitext",
+#     dataset_config: str = "wikitext-2-raw-v1",
+#     max_sequence_length: int = 128,
+#     evaluation_interval: int = 100,
+#     memory_reallocation_interval: int = 200
+# ) -> str:
+#     """
+#     Run an adaptive training experiment with multiple models.
+
+#     Args:
+#         output_dir: Directory to save results
+#         total_steps: Total number of training steps
+#         dataset_name: HuggingFace dataset name
+#         dataset_config: Dataset configuration
+#         max_sequence_length: Maximum sequence length for tokenization
+#         evaluation_interval: Steps between evaluations
+#         memory_reallocation_interval: Steps between memory reallocations
+
+#     Returns:
+#         str: Name of the winning model
+#     """
+#     # Configure logging for this run
+#     os.makedirs(output_dir, exist_ok=True)
+#     log_file = os.path.join(output_dir, "experiment.log")
+#     logger.add(log_file, rotation="100 MB")
+
+#     logger.info("=" * 80)
+#     logger.info("Starting adaptive training experiment")
+#     logger.info(f"Output directory: {output_dir}")
+#     logger.info(f"Dataset: {dataset_name}/{dataset_config}")
+#     logger.info(f"Total steps: {total_steps}")
+#     logger.info("=" * 80)
+
+#     # Define model configurations
+#     model_configs = [
+#         ModelConfig(
+#             name="gpt2-small",
+#             model_type="gpt2",
+#             model_id="gpt2",
+#             initial_memory_share=0.25,
+#             learning_rate=5e-5,
+#             gradient_accumulation_steps=2
+#         ),
+#         ModelConfig(
+#             name="gpt2-medium",
+#             model_type="gpt2",
+#             model_id="gpt2-medium",
+#             initial_memory_share=0.25,
+#             learning_rate=4e-5,
+#             gradient_accumulation_steps=4
+#         ),
+#         ModelConfig(
+#             name="bert-base",
+#             model_type="bert",
+#             model_id="bert-base-uncased",
+#             initial_memory_share=0.25,
+#             learning_rate=3e-5,
+#             gradient_accumulation_steps=1
+#         ),
+#         ModelConfig(
+#             name="roberta-base",
+#             model_type="roberta",
+#             model_id="roberta-base",
+#             initial_memory_share=0.25,
+#             learning_rate=3e-5,
+#             gradient_accumulation_steps=1
+#         )
+#     ]
+
+#     # Initialize the arena
+#     arena = ModelArena(
+#         model_configs=model_configs,
+#         dataset_name=dataset_name,
+#         dataset_config=dataset_config,
+#         max_sequence_length=max_sequence_length,
+#         evaluation_interval=evaluation_interval,
+#         memory_reallocation_interval=memory_reallocation_interval
+#     )
+
+#     # Setup models and datasets
+#     arena.setup()
+
+#     # Start training
+#     winner = arena.train(
+#         total_steps=total_steps,
+#         save_dir=output_dir
+#     )
+
+#     logger.info(f"Experiment completed. Winning model: {winner}")
+#     logger.info(f"Results saved to {output_dir}")
+
+#     return winner
+
+
+# # Example usage
+# if __name__ == "__main__":
+#     # Smaller dataset for quicker experimentation
+#     winner = run_adaptive_training_experiment(
+#         total_steps=1000,
+#         dataset_name="wikitext",
+#         dataset_config="wikitext-2-raw-v1",
+#         max_sequence_length=128,
+#         evaluation_interval=50,
+#         memory_reallocation_interval=100
+#     )
+
+#     print(f"Winning model: {winner}")
+
+
+# """
+# Adaptive Multi-Model Training Framework Extension for Modern 3B LLMs
+
+# This experiment extends the original Adaptive Multi-Model Training Framework to use
+# more modern 3B parameter range LLMs such as Llama, Mistral, and other similar models.
+# """
+
+# import os
+# import torch
+# from typing import List
+# from loguru import logger
+
+# # Import from the original framework
+# from transformers import AutoModelForCausalLM, AutoTokenizer
+
+
+def run_modern_llm_experiment(
+    output_dir: str = "./modern_llm_results",
+    total_steps: int = 2000,
     dataset_name: str = "wikitext",
     dataset_config: str = "wikitext-2-raw-v1",
-    max_sequence_length: int = 128,
+    max_sequence_length: int = 512,
     evaluation_interval: int = 100,
-    memory_reallocation_interval: int = 200
-) -> str:
+    memory_reallocation_interval: int = 200,
+    use_peft: bool = True,
+):
     """
-    Run an adaptive training experiment with multiple models.
-
+    Run an adaptive training experiment with modern 3B parameter LLMs.
+    
     Args:
         output_dir: Directory to save results
         total_steps: Total number of training steps
@@ -925,7 +1054,8 @@ def run_adaptive_training_experiment(
         max_sequence_length: Maximum sequence length for tokenization
         evaluation_interval: Steps between evaluations
         memory_reallocation_interval: Steps between memory reallocations
-
+        use_peft: Whether to use Parameter-Efficient Fine-Tuning (PEFT)
+        
     Returns:
         str: Name of the winning model
     """
@@ -933,52 +1063,202 @@ def run_adaptive_training_experiment(
     os.makedirs(output_dir, exist_ok=True)
     log_file = os.path.join(output_dir, "experiment.log")
     logger.add(log_file, rotation="100 MB")
-
+    
     logger.info("=" * 80)
-    logger.info("Starting adaptive training experiment")
+    logger.info("Starting modern LLM adaptive training experiment")
     logger.info(f"Output directory: {output_dir}")
     logger.info(f"Dataset: {dataset_name}/{dataset_config}")
     logger.info(f"Total steps: {total_steps}")
+    logger.info(f"Using PEFT: {use_peft}")
     logger.info("=" * 80)
-
-    # Define model configurations
+    
+    # Check GPU availability and warn if resources might be insufficient
+    if torch.cuda.is_available():
+        gpu_memory_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+        logger.info(f"Available GPU memory: {gpu_memory_gb:.2f} GB")
+        if gpu_memory_gb < 24:
+            logger.warning("Warning: 3B parameter models may require 24+ GB of GPU memory.")
+            logger.warning("Consider using PEFT methods or smaller models if OOM errors occur.")
+    else:
+        logger.warning("No GPU detected! Training 3B parameter models on CPU is not recommended.")
+    
+    # Define model configurations for modern 3B LLMs
     model_configs = [
         ModelConfig(
-            name="gpt2-small",
-            model_type="gpt2",
-            model_id="gpt2",
-            initial_memory_share=0.25,
-            learning_rate=5e-5,
-            gradient_accumulation_steps=2
+            name="llama-3b",
+            model_type="llama",
+            model_id="meta-llama/Llama-3.2-3B-Instruct",  # We'll load with low_cpu_mem_usage and device_map="auto"
+            initial_memory_share=0.33,
+            learning_rate=2e-5,
+            gradient_accumulation_steps=8,
         ),
         ModelConfig(
-            name="gpt2-medium",
-            model_type="gpt2",
-            model_id="gpt2-medium",
-            initial_memory_share=0.25,
-            learning_rate=4e-5,
-            gradient_accumulation_steps=4
+            name="mistral-3b",
+            model_type="mistral",
+            model_id="Qwen/Qwen2.5-VL-3B-Instruct",  # We'll load with low_cpu_mem_usage and device_map="auto"
+            initial_memory_share=0.33,
+            learning_rate=2e-5,
+            gradient_accumulation_steps=8,
         ),
         ModelConfig(
-            name="bert-base",
-            model_type="bert",
-            model_id="bert-base-uncased",
-            initial_memory_share=0.25,
-            learning_rate=3e-5,
-            gradient_accumulation_steps=1
+            name="falcon-3b",
+            model_type="falcon",
+            model_id="bigscience/bloomz-3b",  # We'll load with low_cpu_mem_usage and device_map="auto"
+            initial_memory_share=0.33,
+            learning_rate=2e-5,
+            gradient_accumulation_steps=8,
         ),
-        ModelConfig(
-            name="roberta-base",
-            model_type="roberta",
-            model_id="roberta-base",
-            initial_memory_share=0.25,
-            learning_rate=3e-5,
-            gradient_accumulation_steps=1
-        )
     ]
+    
+    # Extend the ModelArena class to handle modern LLMs
+    class ModernLLMArena(ModelArena):
+        def _initialize_model(self, config: ModelConfig):
+            """Override model initialization to handle modern LLMs and apply PEFT if needed."""
+            logger.info(f"Initializing model {config.name} ({config.model_type})")
 
-    # Initialize the arena
-    arena = ModelArena(
+            # Load tokenizer
+            tokenizer = AutoTokenizer.from_pretrained(config.model_id)
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+            self.tokenizers[config.name] = tokenizer
+
+            # Load model with optimizations for large models
+            model_kwargs = {
+                "low_cpu_mem_usage": True,
+                "torch_dtype": torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            }
+            
+            if torch.cuda.is_available():
+                # Use device_map="auto" for automatic model sharding across GPUs if multiple are available
+                model_kwargs["device_map"] = "auto"
+            
+            # Load model
+            logger.info(f"Loading {config.name} with optimizations...")
+            
+            try:
+                # For all model types, try using AutoModelForCausalLM first
+                model = AutoModelForCausalLM.from_pretrained(
+                    config.model_id, 
+                    **model_kwargs
+                )
+                
+                # Check if we have enough memory to load the full model
+                if torch.cuda.is_available():
+                    available_memory = torch.cuda.get_device_properties(0).total_memory
+                    required_memory = model.get_memory_footprint() * 2  # Approximate memory needed during training
+                    
+                    if required_memory > available_memory:
+                        logger.warning(f"Model {config.name} requires more memory than available.")
+                        logger.warning(f"Required: {required_memory / 1e9:.2f} GB, Available: {available_memory / 1e9:.2f} GB")
+                        logger.warning("Consider enabling PEFT or using smaller models.")
+                
+                # Apply PEFT if requested
+                if use_peft:
+                    try:
+                        from peft import get_peft_model, LoraConfig, TaskType
+                        
+                        logger.info(f"Applying LoRA to {config.name}")
+                        
+                        # Configure LoRA
+                        peft_config = LoraConfig(
+                            task_type=TaskType.CAUSAL_LM,
+                            inference_mode=False,
+                            r=16,  # rank
+                            lora_alpha=32,
+                            lora_dropout=0.1,
+                            target_modules=["q_proj", "v_proj"]  # Appropriate target modules for most transformer models
+                        )
+                        
+                        # Apply PEFT configuration
+                        model = get_peft_model(model, peft_config)
+                        logger.info(f"LoRA applied successfully to {config.name}")
+                        
+                        # Log number of trainable parameters
+                        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+                        total_params = sum(p.numel() for p in model.parameters())
+                        logger.info(f"Trainable parameters: {trainable_params:,} ({trainable_params/total_params:.2%} of total)")
+                        
+                    except ImportError:
+                        logger.warning("PEFT library not found. Installing with pip...")
+                        import subprocess
+                        subprocess.run(["pip", "install", "peft"], check=True)
+                        
+                        # Try again after installation
+                        from peft import get_peft_model, LoraConfig, TaskType
+                        
+                        logger.info(f"Applying LoRA to {config.name}")
+                        
+                        # Configure LoRA
+                        peft_config = LoraConfig(
+                            task_type=TaskType.CAUSAL_LM,
+                            inference_mode=False,
+                            r=16,
+                            lora_alpha=32,
+                            lora_dropout=0.1,
+                            target_modules=["q_proj", "v_proj"]
+                        )
+                        
+                        # Apply PEFT configuration
+                        model = get_peft_model(model, peft_config)
+                        logger.info(f"LoRA applied successfully to {config.name}")
+                    
+                    except Exception as e:
+                        logger.error(f"Failed to apply PEFT to {config.name}: {str(e)}")
+                        logger.warning("Continuing without PEFT...")
+            
+            except Exception as e:
+                logger.error(f"Error loading model {config.name}: {str(e)}")
+                logger.error("Attempting to load a smaller version or alternative model...")
+                
+                # Fallback to smaller models if original fails
+                fallback_models = {
+                    "llama-3b": "facebook/opt-1.3b",
+                    "mistral-3b": "EleutherAI/pythia-1.4b",
+                    "falcon-3b": "EleutherAI/gpt-neo-1.3B",
+                    "phi-3b": "microsoft/phi-1_5"
+                }
+                
+                if config.name in fallback_models:
+                    fallback_id = fallback_models[config.name]
+                    logger.info(f"Falling back to {fallback_id}")
+                    
+                    model = AutoModelForCausalLM.from_pretrained(
+                        fallback_id,
+                        low_cpu_mem_usage=True,
+                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+                    )
+                else:
+                    # If no specific fallback, use a very small model
+                    logger.info("Falling back to a small GPT-2 model")
+                    model = AutoModelForCausalLM.from_pretrained("gpt2")
+            
+            # Move model to device (if not already handled by device_map="auto")
+            if not use_peft and model.device.type != "cuda" and torch.cuda.is_available():
+                logger.info(f"Moving {config.name} to GPU...")
+                model.to(self.device)
+                
+            self.models[config.name] = model
+            
+            # Continue with the rest of the initialization as in the original method
+            # (optimizer, dataloaders, etc.)
+            super()._initialize_model(config)
+            
+        def _evaluate_model(self, model_name: str) -> float:
+            """Override evaluation to handle modern LLMs' specific features."""
+            # Check if the model uses PEFT
+            model = self.models[model_name]
+            is_peft_model = hasattr(model, 'base_model')
+            
+            # For PEFT models, we might need special handling during evaluation
+            if is_peft_model and use_peft:
+                logger.info(f"Evaluating PEFT model {model_name}")
+                # Special PEFT evaluation logic can be added here if needed
+            
+            # Call the original evaluation method
+            return super()._evaluate_model(model_name)
+    
+    # Initialize the ModernLLMArena
+    arena = ModernLLMArena(
         model_configs=model_configs,
         dataset_name=dataset_name,
         dataset_config=dataset_config,
@@ -986,32 +1266,43 @@ def run_adaptive_training_experiment(
         evaluation_interval=evaluation_interval,
         memory_reallocation_interval=memory_reallocation_interval
     )
-
+    
     # Setup models and datasets
-    arena.setup()
+    try:
+        arena.setup()
+        
+        # Start training
+        winner = arena.train(
+            total_steps=total_steps,
+            save_dir=output_dir
+        )
+        
+        logger.info(f"Experiment completed. Winning model: {winner}")
+        logger.info(f"Results saved to {output_dir}")
+        
+        return winner
+        
+    except Exception as e:
+        logger.error(f"Experiment failed: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        logger.warning("Consider using PEFT, reducing the number of models, or using smaller models.")
+        return None
 
-    # Start training
-    winner = arena.train(
-        total_steps=total_steps,
-        save_dir=output_dir
-    )
 
-    logger.info(f"Experiment completed. Winning model: {winner}")
-    logger.info(f"Results saved to {output_dir}")
-
-    return winner
-
-
-# Example usage
 if __name__ == "__main__":
-    # Smaller dataset for quicker experimentation
-    winner = run_adaptive_training_experiment(
-        total_steps=1000,
+    # You may need to install additional libraries for this experiment
+    # pip install peft accelerate bitsandbytes
+    
+    # Run the experiment with Parameter-Efficient Fine-Tuning
+    winner = run_modern_llm_experiment(
+        total_steps=500,  # Reduced for initial testing
         dataset_name="wikitext",
         dataset_config="wikitext-2-raw-v1",
-        max_sequence_length=128,
+        max_sequence_length=512,
         evaluation_interval=50,
-        memory_reallocation_interval=100
+        memory_reallocation_interval=100,
+        use_peft=True,  # Enable PEFT for memory efficiency
     )
-
+    
     print(f"Winning model: {winner}")
