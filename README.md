@@ -8,3 +8,12 @@
 
 
 We introduce ModelArena (A Competitive En- vironment for Multi-Agent Training), a novel training methodology that dynamically real- locates computational resources across multi- ple models during simultaneous training. Un- like conventional approaches that train mod- els in isolation or with static resource alloca- tion, ModelArena creates a competitive learn- ing environment where models that demon- strate faster learning rates are dynamically re- warded with increased memory allocation. This introduces a selection mechanism inspired by evolutionary principles, where computational resources flow toward models exhibiting the most promising learning trajectories. We for- mulate the mathematical foundation for mea- suring relative learning rates, implement an adaptive memory reallocation strategy, and demonstrate its effectiveness across heteroge- neous model architectures. Our experiments with transformer-based language models show that ModelArena can efficiently identify and pri- oritize high-potential models, leading to more effective resource utilization and accelerated training for the most promising architectures. Additionally, we discuss the implications of this approach for multi-agent systems and pro- pose extensions for collaborative-competitive training regimes that could further enhance model development. The method introduces a new training paradigm that combines principles from meta-learning, neural architecture search, and evolutionary computation into a unified framework for model training optimization.
+
+
+# Todo
+
+- [ ] Fix the table in figure 7 page 7
+- [ ] Reduce equations
+- [ ] Add more references
+- [ ] Add more charts and graphs to the evaluations
+- [ ] Run another experiment with the llama3 7b and mistral
